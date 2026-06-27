@@ -1,0 +1,39 @@
+name: Build inline comments manifest
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 * * * *"
+  discussion:
+    types: [created, edited, deleted, category_changed]
+  discussion_comment:
+    types: [created, edited, deleted]
+
+permissions:
+  contents: write
+  discussions: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout comments repository
+        uses: actions/checkout@v4
+
+      - name: Build manifest from Giscus discussions
+        run: node scripts/build-inline-comments-manifest.mjs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Commit manifest
+        run: |
+          if git diff --quiet -- inline-comments.json; then
+            echo "inline-comments.json is unchanged"
+            exit 0
+          fi
+
+          git config user.name "codekissmev0"
+          git config user.email "278903984+codekissmev0@users.noreply.github.com"
+          git add inline-comments.json
+          git commit -m "chore: update inline comments manifest"
+          git push
